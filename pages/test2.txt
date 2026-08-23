@@ -1,0 +1,240 @@
+    <script>
+        // Toggle sidebar on mobile
+        document.querySelector('.navbar-top::before')?.addEventListener('click', () => {
+            document.querySelector('.sidebar').classList.toggle('active');
+        });
+
+        // Show success/error messages
+        <?php if ($success) { ?>
+            Swal.fire({
+                icon: 'success',
+                title: 'نجاح العملية',
+                text: '<?php echo htmlspecialchars($success); ?>',
+                position: 'center',
+                showConfirmButton: true,
+                confirmButtonColor: '#009578',
+                timer: 5000
+            });
+        <?php } ?>
+        <?php if ($error) { ?>
+            Swal.fire({
+                icon: 'error',
+                title: 'خطأ',
+                text: '<?php echo htmlspecialchars($error); ?>',
+                position: 'center',
+                showConfirmButton: true,
+                confirmButtonColor: '#009578',
+                timer: 5000
+            });
+        <?php } ?>
+
+        // Edit client
+        function editClient(accNo, button) {
+            const row = button.closest('tr');
+            const name = row.dataset.name;
+            const email = row.dataset.email;
+            const address = row.dataset.address || '';
+
+            Swal.fire({
+                title: 'Edit Client',
+                html: `
+                    <input id="edit-fname" class="swal2-input" placeholder="First Name" value="${name}">
+                    <input id="edit-email" class="swal2-input" placeholder="Email" value="${email}">
+                    <input id="edit-address" class="swal2-input" placeholder="Address" value="${address}">
+                `,
+                showCancelButton: true,
+                confirmButtonText: 'Save',
+                confirmButtonColor: '#009578',
+                cancelButtonColor: '#6c757d',
+                focusConfirm: false,
+                preConfirm: () => {
+                    const fname = document.getElementById('edit-fname').value.trim();
+                    const email = document.getElementById('edit-email').value.trim();
+                    const address = document.getElementById('edit-address').value.trim();
+                    if (!fname || !email || !address) {
+                        Swal.showValidationMessage('All fields are required');
+                        return false;
+                    }
+                    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+                        Swal.showValidationMessage('Invalid email format');
+                        return false;
+                    }
+                    return { fname, email, address };
+                }
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    const data = {
+                        accNo: accNo,
+                        fname: result.value.fname,
+                        email: result.value.email,
+                        address: result.value.address
+                    };
+                    console.log('Sending data to edit_client.php:', data);
+
+                    fetch('../../scripts/edit_client.php', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(data)
+                    })
+                    .then(response => {
+                        console.log('Response status:', response.status);
+                        if (!response.ok) {
+                            throw new Error('Network response was not ok: ' + response.statusText);
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        console.log('Response data:', data);
+                        if (data.success) {
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'نجاح العملية',
+                                text: 'Client updated successfully',
+                                position: 'center',
+                                confirmButtonColor: '#009578',
+                                timer: 3000,
+                                timerProgressBar: true
+                            }).then(() => {
+                                location.reload();
+                            });
+                        } else {
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'خطأ',
+                                text: data.message || 'Failed to update client',
+                                position: 'center',
+                                confirmButtonColor: '#009578',
+                                timer: 5000
+                            });
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Fetch error:', error);
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'خطأ',
+                            text: 'An error occurred while updating the client: ' + error.message,
+                            position: 'center',
+                            confirmButtonColor: '#009578',
+                            timer: 5000
+                        });
+                    });
+                }
+            });
+        }
+
+        // Delete client
+        function deleteClient(accNo) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Are you sure?',
+                text: 'This will permanently delete the client account!',
+                showCancelButton: true,
+                confirmButtonText: 'Delete',
+                confirmButtonColor: '#dc3545',
+                cancelButtonColor: '#009578'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    fetch('../../scripts/delete_client.php', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            accNo: accNo
+                        })
+                    }).then(response => response.json()).then(data => {
+                        if (data.success) {
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'نجاح العملية',
+                                text: 'Client deleted successfully',
+                                position: 'center',
+                                confirmButtonColor: '#009578',
+                                timer: 3000,
+                                timerProgressBar: true
+                            }).then(() => location.reload());
+                        } else {
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'خطأ',
+                                text: data.message || 'Failed to delete client',
+                                position: 'center',
+                                confirmButtonColor: '#009578',
+                                timer: 5000
+                            });
+                        }
+                    }).catch(error => {
+                        console.error('Fetch error:', error);
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'خطأ',
+                            text: 'An error occurred while deleting the client: ' + error.message,
+                            position: 'center',
+                            confirmButtonColor: '#009578',
+                            timer: 5000
+                        });
+                    });
+                }
+            });
+        }
+
+        // Update loan status
+        function updateLoanStatus(loanId, status) {
+            Swal.fire({
+                icon: 'question',
+                title: `Confirm ${status} Loan`,
+                text: `Are you sure you want to ${status.toLowerCase()} this loan?`,
+                showCancelButton: true,
+                confirmButtonText: status,
+                confirmButtonColor: status === 'Approved' ? '#009578' : '#dc3545',
+                cancelButtonColor: '#6c757d'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    fetch('../../scripts/update_loan_status.php', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            loanId: loanId,
+                            status: status
+                        })
+                    }).then(response => response.json()).then(data => {
+                        if (data.success) {
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'نجاح العملية',
+                                text: `Loan ${status.toLowerCase()} successfully`,
+                                position: 'center',
+                                confirmButtonColor: '#009578',
+                                timer: 3000,
+                                timerProgressBar: true
+                            }).then(() => location.reload());
+                        } else {
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'خطأ',
+                                text: data.message || 'Failed to update loan status',
+                                position: 'center',
+                                confirmButtonColor: '#009578',
+                                timer: 5000
+                            });
+                        }
+                    }).catch(error => {
+                        console.error('Fetch error:', error);
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'خطأ',
+                            text: 'An error occurred while updating loan status: ' + error.message,
+                            position: 'center',
+                            confirmButtonColor: '#009578',
+                            timer: 5000
+                        });
+                    });
+                }
+            });
+        }
+    </script>

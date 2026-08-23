@@ -1,0 +1,24 @@
+// Check user role
+$accNo = $_SESSION['AccNo'];
+$sql = "SELECT Role FROM userinfo WHERE AccNo = ?";
+$stmt = mysqli_prepare($conn, $sql);
+if (!$stmt) {
+    header('Location: index.php?msg=Database error: ' . urlencode(mysqli_error($conn)));
+    exit;
+}
+mysqli_stmt_bind_param($stmt, "i", $accNo);
+mysqli_stmt_execute($stmt);
+$result = mysqli_stmt_get_result($stmt);
+$user = mysqli_fetch_assoc($result);
+$role = $user ? $user['Role'] : '';
+mysqli_stmt_close($stmt);
+
+
+                    <?php if ($role === 'admin') { ?>
+                    <li class="nav-item">
+                        <a class="nav-link <?php echo basename($_SERVER['PHP_SELF']) == 'admin_panel.php' ? 'active' : ''; ?>" href="admin_panel.php">
+                            <i class="fas fa-user-shield"></i>
+                            <span>Admin Panel</span>
+                        </a>
+                    </li>
+                    <?php } ?>
